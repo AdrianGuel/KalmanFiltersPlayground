@@ -53,26 +53,67 @@ y0 = [np.pi / 4, np.pi / 4, 0.0, 0.0]
 t_span = (0, 10)
 t_eval = np.linspace(*t_span, 100)
 
-# Solve using RK45 and RK23
+# --- RK45 and RK23 from SciPy ---
 sol_rk45 = solve_ivp(dynamics, t_span, y0, t_eval=t_eval, method='RK45')
 sol_rk23 = solve_ivp(dynamics, t_span, y0, t_eval=t_eval, method='RK23')
 
 theta1_rk45, theta2_rk45 = sol_rk45.y[0], sol_rk45.y[1]
 theta1_rk23, theta2_rk23 = sol_rk23.y[0], sol_rk23.y[1]
 
+# --- EXPLICIT RK1 (Euler) ---
+def rk1_solver(f, t_span, y0, dt):
+    t0, tf = t_span
+    times = np.arange(t0, tf + dt, dt)
+    states = np.zeros((len(times), len(y0)))
+    states[0] = y0
+    for i in range(1, len(times)):
+        states[i] = states[i-1] + dt * np.array(f(times[i-1], states[i-1]))
+    return times, states
+
+# --- EXPLICIT RK4 ---
+def rk4_solver(f, t_span, y0, dt):
+    t0, tf = t_span
+    times = np.arange(t0, tf + dt, dt)
+    states = np.zeros((len(times), len(y0)))
+    states[0] = y0
+    for i in range(1, len(times)):
+        t = times[i-1]
+        y = states[i-1]
+        k1 = np.array(f(t, y))
+        k2 = np.array(f(t + dt/2, y + dt/2 * k1))
+        k3 = np.array(f(t + dt/2, y + dt/2 * k2))
+        k4 = np.array(f(t + dt, y + dt * k3))
+        states[i] = y + (dt / 6) * (k1 + 2*k2 + 2*k3 + k4)
+    return times, states
+
+# Simulate with RK1 and RK4
+dt = 0.001
+t_rk1, y_rk1 = rk1_solver(dynamics, t_span, y0, dt)
+t_rk4, y_rk4 = rk4_solver(dynamics, t_span, y0, dt)
+
 # --- PLOTLY ANGLE COMPARISON ---
 angle_plot = go.Figure()
+
+# RK45 and RK23
 angle_plot.add_trace(go.Scatter(x=t_eval, y=theta1_rk45, mode='lines', name='θ1 RK45', line=dict(color='green')))
 angle_plot.add_trace(go.Scatter(x=t_eval, y=theta2_rk45, mode='lines', name='θ2 RK45', line=dict(color='orange')))
 angle_plot.add_trace(go.Scatter(x=t_eval, y=theta1_rk23, mode='lines', name='θ1 RK23', line=dict(color='green', dash='dash')))
 angle_plot.add_trace(go.Scatter(x=t_eval, y=theta2_rk23, mode='lines', name='θ2 RK23', line=dict(color='orange', dash='dash')))
 
+# RK1 and RK4
+angle_plot.add_trace(go.Scatter(x=t_rk1, y=y_rk1[:, 0], mode='lines', name='θ1 RK1', line=dict(color='blue', dash='dot')))
+angle_plot.add_trace(go.Scatter(x=t_rk1, y=y_rk1[:, 1], mode='lines', name='θ2 RK1', line=dict(color='red', dash='dot')))
+angle_plot.add_trace(go.Scatter(x=t_rk4, y=y_rk4[:, 0], mode='lines', name='θ1 RK4', line=dict(color='blue')))
+angle_plot.add_trace(go.Scatter(x=t_rk4, y=y_rk4[:, 1], mode='lines', name='θ2 RK4', line=dict(color='red')))
+
 angle_plot.update_layout(
-    title='Comparison of Joint Angles: RK45 vs RK23',
+    title='Comparison of Joint Angles: RK45 vs RK23 vs RK1 vs RK4',
     xaxis_title='Time (s)',
     yaxis_title='Angle (rad)',
-    height=500
+    height=600
 )
+
+angle_plot.show()
 
 # --- ANIMATION USING RK45 ---
 x1 = l1 * np.cos(theta1_rk45)
