@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.linalg import inv
 
 #parameters
 b = 1.0
@@ -18,7 +19,7 @@ Bd = np.array([[0],
                [0],
                [0],
                [T / m]])
-C_mat = np.array([1, 0, 0, 0])  # Output is capacitor voltage
+C_mat = np.array([[1, 0, 0, 0],[0, 0, 1, 0]])  # Output is capacitor voltage
 
 # Noise covariances
 Qv = 0.001 * np.eye(4)  # process noise
@@ -32,14 +33,14 @@ P = np.eye(4)
 N = 1000
 u = np.ones(N)  # Step input
 x_true = np.zeros((4, N))  # [v_C; i_L]
-y_meas = np.zeros(N)
+y_meas = np.zeros((2,N))
 x_est = np.zeros(N)
 
 # Simulate system with noise
 for k in range(1, N):
     process_noise = np.random.multivariate_normal(mean=[0, 0, 0, 0], cov=Qv)
     x_true[:, k] = Ad @ x_true[:, k-1] + Bd.flatten() * u[k-1] + process_noise
-    y_meas[k] = C_mat @ x_true[:, k] + np.random.normal(0, np.sqrt(Qxi))
+    y_meas[:, k] = C_mat @ x_true[:, k] + np.random.normal(0, np.sqrt(Qxi))
 
 # Kalman filter loop
 for k in range(1, N):
@@ -50,16 +51,16 @@ for k in range(1, N):
     Pxy = P_pred @ C_mat.T
 
     # --- Update ---
-    L_gain = Pxy / Py
-    x_hat = x_pred + L_gain * (y_meas[k] - C_mat @ x_pred)
-    P = P_pred - np.outer(L_gain, L_gain) * Py
+    L_gain = Pxy @ inv(Py)
+    x_hat = x_pred + L_gain @ (y_meas[:,k] - C_mat @ x_pred)
+    P = P_pred - L_gain @ Py @ L_gain.T 
 
     x_est[k] = x_hat[0]  # Estimated capacitor voltage
 
 # Plot
 plt.plot(x_true[0], label="True mass 1 position")
-plt.plot(y_meas, label="Measured mass 1 position", linestyle='dotted')
-plt.plot(x_est, label="Estimated Voltage", linestyle='--')
+plt.plot(y_meas[0], label="Measured mass 1 position", linestyle='dotted')
+# plt.plot(x_est, label="Estimated Voltage", linestyle='--')
 plt.xlabel("Time step")
 plt.ylabel("Position (m)")
 plt.title("two masses system")
