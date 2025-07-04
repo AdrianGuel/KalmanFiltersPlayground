@@ -97,7 +97,7 @@ def sr_ukf(f, h, x0, S0, Q, R, us, zs, dt, m, alpha=1, beta=2, kappa=0):
         # 🔒 Clamp del parámetro de fricción
         x[0] = np.clip(x[0], -10.0, 10.0)
         x[1] = np.clip(x[1], -5.0, 5.0)
-        x[2] = np.clip(x[2], 0.0, 5.0)
+        x[2] = np.clip(x[2], 0.0, 1.0)
 
         # Clipping general por seguridad
         if np.any(np.isnan(x)) or np.any(np.isinf(x)):
@@ -113,7 +113,7 @@ def sr_ukf(f, h, x0, S0, Q, R, us, zs, dt, m, alpha=1, beta=2, kappa=0):
 
 # --- Simulación y ejecución ---
 np.random.seed(0)
-dt = 0.1
+dt = 0.01
 m = 1.0
 true_b = 0.5
 x_true = np.array([0.5, 1.0, true_b])
@@ -122,9 +122,9 @@ u = 0.0
 # 🔧 Aumento de ruido para el parámetro de fricción
 Q = np.diag([1e-4, 1e-4, 1e-3])
 R = np.diag([1e-2])
-S0 = cholesky(np.diag([1e-2, 1e-2, 0.1]))
+S0 = cholesky(np.diag([1e-2, 1e-2, 0.01]))
 x0 = np.array([0.0, 0.5, 0.0])
-T = 300
+T = 5000
 us = np.full(T, u)
 
 xs_true = []
