@@ -18,11 +18,11 @@ Bd = Ts * B
 t = np.arange(0, L + Ts, Ts)
 w = 1e-5
 v = 1e-3
-Q = 1e-5 * np.eye(3)
+Q = 1e-2 * np.eye(3)
 Q[2, 2] = 1e-3
 R = v**2
-P = 1e-6 * np.eye(3)
-P[2, 2] = 3e-2
+P = 1e-2 * np.eye(3)
+P[2, 2] = 30
 alpha = 0.03
 
 # Initialization
